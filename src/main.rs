@@ -125,6 +125,7 @@ impl LanguageServer for Backend {
             CompletionItem::new_simple("INSERT".to_string(), "Insert data".to_string()),
             CompletionItem::new_simple("UPDATE".to_string(), "Update data".to_string()),
             CompletionItem::new_simple("DELETE".to_string(), "Delete data".to_string()),
+            CompletionItem::new_simple("REMOVE".to_string(), "Remove data".to_string()),
         ])))
     }
 
@@ -151,48 +152,27 @@ impl LanguageServer for Backend {
 
             let mut higlights: Vec<DocumentHighlight> = Vec::new();
 
-            if *header_idx == idx {
-                for i in idx + 1..=idx + 30 {
-                    let temp_uri = format!("{}:{}", uri, i);
-                    if let Some(temp_line) = self.line_map.get(temp_uri.as_str()) {
-                        if temp_line.header_idx != idx {
-                            break;
-                        }
-                        let temp_content = &temp_line.content;
+            let (range, header_check) = match idx == *header_idx {
+                true => ((idx + 1)..=(idx + 30), Some(idx)),
+                false => (*header_idx..=*header_idx, None),
+            };
 
-                        let mut ture_start = temp_content
-                            .char_indices()
-                            .filter(|&(_, ch)| ch == ';')
-                            .map(|(i, _)| i as u32)
-                            .skip(semicolon_count - 1);
+            for i in range {
+                let temp_uri = format!("{}:{}", uri, i);
+                let temp_line = match self.line_map.get(temp_uri.as_str()) {
+                    Some(line) => line,
+                    None => continue,
+                };
 
-                        let range = Range {
-                            start: Position {
-                                line: i,
-                                character: ture_start.next()? + 1,
-                            },
-                            end: Position {
-                                line: i,
-                                character: ture_start.next()?,
-                            },
-                        };
-
-                        let highlight = DocumentHighlight {
-                            range,
-                            kind: Some(DocumentHighlightKind::TEXT), // You can adjust the kind if needed
-                        };
-
-                        higlights.push(highlight);
-                    } else {
-                        continue; // Skip to the next iteration if temp_line is None
+                if let Some(expected_header) = header_check {
+                    if temp_line.header_idx != expected_header {
+                        break;
                     }
                 }
-            } else {
-                let header_uri = format!("{}:{}", uri, header_idx);
-                let header = self.line_map.get(header_uri.as_str())?;
-                let header_content = &header.content;
 
-                let mut ture_start = header_content
+                let temp_content = &temp_line.content;
+
+                let mut ture_start = temp_content
                     .char_indices()
                     .filter(|&(_, ch)| ch == ';')
                     .map(|(i, _)| i as u32)
@@ -200,27 +180,27 @@ impl LanguageServer for Backend {
 
                 let range = Range {
                     start: Position {
-                        line: *header_idx,
+                        line: i,
                         character: ture_start.next()? + 1,
                     },
                     end: Position {
-                        line: *header_idx,
+                        line: i,
                         character: ture_start.next()?,
                     },
                 };
 
                 let highlight = DocumentHighlight {
                     range,
-                    kind: Some(DocumentHighlightKind::TEXT), // You can adjust the kind if needed
+                    kind: Some(DocumentHighlightKind::TEXT),
                 };
 
                 higlights.push(highlight);
             }
 
-            return Some(higlights); // Return the highlight as a vector
+            Some(higlights)
         }();
 
-        Ok(highlight_list) // Return None if no highlight is found
+        Ok(highlight_list)
     }
 }
 
