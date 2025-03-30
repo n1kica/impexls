@@ -160,9 +160,6 @@ impl LanguageServer for Backend {
         &self,
         params: DocumentHighlightParams,
     ) -> Result<Option<Vec<DocumentHighlight>>> {
-        self.client
-            .log_message(MessageType::INFO, format!("WE ARE NOT EVEN IN"))
-            .await;
         let highlight_list = || -> Option<Vec<DocumentHighlight>> {
             let uri = params.text_document_position_params.text_document.uri;
             let idx = params.text_document_position_params.position.line;
@@ -246,26 +243,6 @@ impl LanguageServer for Backend {
 
             return Some(higlights); // Return the highlight as a vector
         }();
-        if let Some(highlights) = &highlight_list {
-            if let Some(first_highlight) = highlights.first() {
-                println!("{:?}", first_highlight);
-                self.client
-                    .log_message(
-                        MessageType::INFO,
-                        format!(
-                            "HOWER: Line: {}, Start: {}, End: {}",
-                            first_highlight.range.start.line,
-                            first_highlight.range.start.character,
-                            first_highlight.range.end.character,
-                        ),
-                    )
-                    .await;
-            }
-        } else {
-            self.client
-                .log_message(MessageType::INFO, format!("WE DIDNT MAKE IT"))
-                .await;
-        }
 
         Ok(highlight_list) // Return None if no highlight is found
     }
