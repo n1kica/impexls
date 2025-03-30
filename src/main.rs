@@ -166,13 +166,13 @@ impl LanguageServer for Backend {
         let highlight_list = || -> Option<Vec<DocumentHighlight>> {
             let uri = params.text_document_position_params.text_document.uri;
             let idx = params.text_document_position_params.position.line;
-            let start = params.text_document_position_params.position.character;
             let full_uri = format!("{}:{}", uri, idx);
 
             let line = self.line_map.get(full_uri.as_str())?;
             let content = &line.content;
             let header_idx = &line.header_idx;
 
+            let start = params.text_document_position_params.position.character;
             let content_up_to_start = &content[0..start as usize];
             let semicolon_count = content_up_to_start.chars().filter(|&c| c == ';').count();
 
