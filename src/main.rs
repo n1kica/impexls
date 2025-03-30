@@ -231,7 +231,7 @@ impl Backend {
             .text
             .lines()
             .enumerate()
-            .filter(|&(_, line)| line.contains(";"))
+            .filter(|&(_, line)| line.contains(";") && !line.contains("#"))
             .scan(0, |header_idx, (idx, line)| {
                 let line = format!("{};", line);
                 if keywords
