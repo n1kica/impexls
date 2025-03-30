@@ -103,8 +103,8 @@ impl LanguageServer for Backend {
             .text_document
             .text
             .lines()
-            .filter(|line| line.contains(";"))
             .enumerate()
+            .filter(|&(_, line)| line.contains(";"))
             .scan(0, |header_idx, (idx, line)| {
                 let line = format!("{};", line);
                 if keywords
