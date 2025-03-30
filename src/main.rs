@@ -97,39 +97,11 @@ impl LanguageServer for Backend {
             .log_message(MessageType::INFO, format!("file opened! URL: {}", uri))
             .await;
 
-        let keywords = ["INSERT_UPDATE", "INSERT", "UPDATE", "DELETE", "REMOVE"];
-
-        params
-            .text_document
-            .text
-            .lines()
-            .enumerate()
-            .filter(|&(_, line)| line.contains(";"))
-            .scan(0, |header_idx, (idx, line)| {
-                let line = format!("{};", line);
-                if keywords
-                    .iter()
-                    .any(|prefix| line.trim_start().starts_with(prefix))
-                {
-                    *header_idx = idx;
-                }
-                Some((idx, line, *header_idx))
-            })
-            .for_each(|(idx, content, header_idx)| {
-                self.line_map.insert(
-                    format!("{}:{}", uri, idx),
-                    Line {
-                        content,
-                        header_idx,
-                    },
-                );
-            });
-    }
-
-    async fn did_change(&self, _: DidChangeTextDocumentParams) {
-        self.client
-            .log_message(MessageType::INFO, "file changed!")
-            .await;
+        self.on_change(TextDocumentItem {
+            text: &params.text_document.text,
+            uri,
+        })
+        .await
     }
 
     async fn did_save(&self, _: DidSaveTextDocumentParams) {
@@ -176,7 +148,7 @@ impl LanguageServer for Backend {
             let mut higlights: Vec<DocumentHighlight> = Vec::new();
 
             if *header_idx as u32 == idx {
-                for i in idx + 1..=idx + 20 {
+                for i in idx + 1..=idx + 30 {
                     let temp_uri = format!("{}:{}", uri, i);
                     if let Some(temp_line) = self.line_map.get(temp_uri.as_str()) {
                         if temp_line.header_idx as u32 != idx {
@@ -245,6 +217,42 @@ impl LanguageServer for Backend {
         }();
 
         Ok(highlight_list) // Return None if no highlight is found
+    }
+}
+
+struct TextDocumentItem<'a> {
+    uri: String,
+    text: &'a str,
+}
+
+impl Backend {
+    async fn on_change<'a>(&self, params: TextDocumentItem<'a>) {
+        let keywords = ["INSERT_UPDATE", "INSERT", "UPDATE", "DELETE", "REMOVE"];
+
+        params
+            .text
+            .lines()
+            .enumerate()
+            .filter(|&(_, line)| line.contains(";"))
+            .scan(0, |header_idx, (idx, line)| {
+                let line = format!("{};", line);
+                if keywords
+                    .iter()
+                    .any(|prefix| line.trim_start().starts_with(prefix))
+                {
+                    *header_idx = idx;
+                }
+                Some((idx, line, *header_idx))
+            })
+            .for_each(|(idx, content, header_idx)| {
+                self.line_map.insert(
+                    format!("{}:{}", params.uri, idx),
+                    Line {
+                        content,
+                        header_idx,
+                    },
+                );
+            });
     }
 }
 
