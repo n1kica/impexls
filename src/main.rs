@@ -142,6 +142,10 @@ impl LanguageServer for Backend {
             let header_idx = &line.header_idx;
 
             let start = params.text_document_position_params.position.character;
+            if content.chars().nth(start as usize) == Some(';') {
+                return None;
+            }
+
             let content_up_to_start = &content[0..start as usize];
             let semicolon_count = content_up_to_start.chars().filter(|&c| c == ';').count();
 
