@@ -104,6 +104,20 @@ impl LanguageServer for Backend {
         .await
     }
 
+    async fn did_change(&self, params: DidChangeTextDocumentParams) {
+        let uri = params.text_document.uri.to_string();
+
+        self.client
+            .log_message(MessageType::INFO, format!("file changed! URL: {}", uri))
+            .await;
+
+        self.on_change(TextDocumentItem {
+            text: &params.content_changes[0].text,
+            uri,
+        })
+        .await
+    }
+
     async fn did_save(&self, _: DidSaveTextDocumentParams) {
         self.client
             .log_message(MessageType::INFO, "file saved!")
