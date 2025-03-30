@@ -30,6 +30,7 @@ impl LanguageServer for Backend {
                     all_commit_characters: None,
                     ..Default::default()
                 }),
+                document_highlight_provider: Some(OneOf::Left(true)),
                 execute_command_provider: Some(ExecuteCommandOptions {
                     commands: vec!["dummy.do_something".to_string()],
                     work_done_progress_options: Default::default(),
@@ -93,7 +94,7 @@ impl LanguageServer for Backend {
         let uri = params.text_document.uri.to_string();
 
         self.client
-            .log_message(MessageType::INFO, format!("file opened! content: {}", uri))
+            .log_message(MessageType::INFO, format!("file opened! URL: {}", uri))
             .await;
 
         let keywords = ["INSERT_UPDATE", "INSERT", "UPDATE", "DELETE", "REMOVE"];
@@ -145,9 +146,54 @@ impl LanguageServer for Backend {
 
     async fn completion(&self, _: CompletionParams) -> Result<Option<CompletionResponse>> {
         Ok(Some(CompletionResponse::Array(vec![
-            CompletionItem::new_simple("Hello".to_string(), "Some detail".to_string()),
-            CompletionItem::new_simple("Bye".to_string(), "More detail".to_string()),
+            CompletionItem::new_simple(
+                "INSERT_UPDATE".to_string(),
+                "Insert/Update data".to_string(),
+            ),
+            CompletionItem::new_simple("INSERT".to_string(), "Insert data".to_string()),
+            CompletionItem::new_simple("UPDATE".to_string(), "Update data".to_string()),
+            CompletionItem::new_simple("DELETE".to_string(), "Delete data".to_string()),
         ])))
+    }
+
+    async fn document_highlight(
+        &self,
+        params: DocumentHighlightParams,
+    ) -> Result<Option<Vec<DocumentHighlight>>> {
+        let uri = params.text_document_position_params.text_document.uri;
+        let line = params.text_document_position_params.position.line;
+        let start = params.text_document_position_params.position.character;
+        let full_uri = format!("{}:{}", uri, line);
+
+        let header_idx = self.line_map.get(full_uri.as_str());
+
+        // Find the corresponding index (or data) to highlight
+        if let Some(line) = self.line_map.get(full_uri.as_str()) {
+            // Assuming `header_idx` gives us a position or range to highlight.
+            let header_idx = line.header_idx;
+            // let start = header_idx.start; // Start position of the highlight
+            // let end = header_idx.end; // End position of the highlight
+            //
+            // let range = Range {
+            //     start: Position {
+            //         line: start.line,
+            //         character: start.character,
+            //     },
+            //     end: Position {
+            //         line: end.line,
+            //         character: end.character,
+            //     },
+            // };
+
+            // let highlight = DocumentHighlight {
+            //     range,
+            //     kind: Some(DocumentHighlightKind::Text), // You can adjust the kind if needed
+            // };
+
+            // return Ok(Some(vec![highlight])); // Return the highlight as a vector
+        }
+
+        Ok(None) // Return None if no highlight is found
     }
 }
 
