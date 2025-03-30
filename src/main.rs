@@ -186,7 +186,7 @@ impl LanguageServer for Backend {
 
                 let temp_content = &temp_line.content;
 
-                let mut ture_start = temp_content
+                let mut target_start = temp_content
                     .char_indices()
                     .filter(|&(_, ch)| ch == ';')
                     .map(|(i, _)| i as u32)
@@ -195,11 +195,11 @@ impl LanguageServer for Backend {
                 let range = Range {
                     start: Position {
                         line: i,
-                        character: ture_start.next()? + 1,
+                        character: target_start.next()? + 1,
                     },
                     end: Position {
                         line: i,
-                        character: ture_start.next()?,
+                        character: target_start.next()?,
                     },
                 };
 
