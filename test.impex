@@ -1,12 +1,6 @@
 $contentCatalog = askoDkContentCatalog
 $contentCV = catalogVersion(CatalogVersion.catalog(Catalog.id[default = $contentCatalog]), CatalogVersion.version[default = Staged])[default = $contentCatalog:Staged]
 
-
-# Import modulegen config properties into impex macros
-UPDATE GenericItem[processor = de.hybris.platform.commerceservices.impex.impl.ConfigPropertyImportProcessor]; pk[unique = true]
-$jarResourceCms = $config-jarResourceCmsValue
-$viewPagePath = /WEB-INF/views/responsive/pages
-
 INSERT_UPDATE PageTemplate; $contentCV[unique = true]; uid[unique = true] ; name                  ; frontendTemplateName     ; restrictedPageTypes(code); active[default = true]
                           ;                          ; WalletPageTemplate ; Wallet Store Template ; account/walletLayoutPage ; ContentPage              ;
 

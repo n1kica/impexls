@@ -160,40 +160,72 @@ impl LanguageServer for Backend {
         &self,
         params: DocumentHighlightParams,
     ) -> Result<Option<Vec<DocumentHighlight>>> {
-        let uri = params.text_document_position_params.text_document.uri;
-        let line = params.text_document_position_params.position.line;
-        let start = params.text_document_position_params.position.character;
-        let full_uri = format!("{}:{}", uri, line);
+        self.client
+            .log_message(MessageType::INFO, format!("WE ARE NOT EVEN IN"))
+            .await;
+        let highlight_list = || -> Option<Vec<DocumentHighlight>> {
+            let uri = params.text_document_position_params.text_document.uri;
+            let idx = params.text_document_position_params.position.line;
+            let start = params.text_document_position_params.position.character;
+            let full_uri = format!("{}:{}", uri, idx);
 
-        let header_idx = self.line_map.get(full_uri.as_str());
+            let line = self.line_map.get(full_uri.as_str())?;
+            let content = &line.content;
+            let header_idx = &line.header_idx;
 
-        // Find the corresponding index (or data) to highlight
-        if let Some(line) = self.line_map.get(full_uri.as_str()) {
-            // Assuming `header_idx` gives us a position or range to highlight.
-            let header_idx = line.header_idx;
-            // let start = header_idx.start; // Start position of the highlight
-            // let end = header_idx.end; // End position of the highlight
-            //
-            // let range = Range {
-            //     start: Position {
-            //         line: start.line,
-            //         character: start.character,
-            //     },
-            //     end: Position {
-            //         line: end.line,
-            //         character: end.character,
-            //     },
-            // };
+            let content_up_to_start = &content[0..start as usize];
+            let semicolon_count = content_up_to_start.chars().filter(|&c| c == ';').count();
 
-            // let highlight = DocumentHighlight {
-            //     range,
-            //     kind: Some(DocumentHighlightKind::Text), // You can adjust the kind if needed
-            // };
+            let header_uri = format!("{}:{}", uri, header_idx);
+            let header = self.line_map.get(header_uri.as_str())?;
+            let header_content = &header.content;
 
-            // return Ok(Some(vec![highlight])); // Return the highlight as a vector
+            let mut ture_start = header_content
+                .char_indices()
+                .filter(|&(_, ch)| ch == ';')
+                .map(|(i, _)| i)
+                .skip(semicolon_count - 1);
+
+            let range = Range {
+                start: Position {
+                    line: *header_idx as u32,
+                    character: ture_start.next()? as u32 + 1,
+                },
+                end: Position {
+                    line: *header_idx as u32,
+                    character: ture_start.next()? as u32,
+                },
+            };
+
+            let highlight = DocumentHighlight {
+                range,
+                kind: Some(DocumentHighlightKind::TEXT), // You can adjust the kind if needed
+            };
+
+            return Some(vec![highlight]); // Return the highlight as a vector
+        }();
+        if let Some(highlights) = &highlight_list {
+            if let Some(first_highlight) = highlights.first() {
+                println!("{:?}", first_highlight);
+                self.client
+                    .log_message(
+                        MessageType::INFO,
+                        format!(
+                            "HOWER: Line: {}, Start: {}, End: {}",
+                            first_highlight.range.start.line,
+                            first_highlight.range.start.character,
+                            first_highlight.range.end.character,
+                        ),
+                    )
+                    .await;
+            }
+        } else {
+            self.client
+                .log_message(MessageType::INFO, format!("WE DIDNT MAKE IT"))
+                .await;
         }
 
-        Ok(None) // Return None if no highlight is found
+        Ok(highlight_list) // Return None if no highlight is found
     }
 }
 
