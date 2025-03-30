@@ -11,7 +11,7 @@ struct Backend {
 
 struct Line {
     content: String,
-    header_idx: usize,
+    header_idx: u32,
 }
 
 #[tower_lsp::async_trait]
@@ -151,11 +151,11 @@ impl LanguageServer for Backend {
 
             let mut higlights: Vec<DocumentHighlight> = Vec::new();
 
-            if *header_idx as u32 == idx {
+            if *header_idx == idx {
                 for i in idx + 1..=idx + 30 {
                     let temp_uri = format!("{}:{}", uri, i);
                     if let Some(temp_line) = self.line_map.get(temp_uri.as_str()) {
-                        if temp_line.header_idx as u32 != idx {
+                        if temp_line.header_idx != idx {
                             break;
                         }
                         let temp_content = &temp_line.content;
@@ -163,17 +163,17 @@ impl LanguageServer for Backend {
                         let mut ture_start = temp_content
                             .char_indices()
                             .filter(|&(_, ch)| ch == ';')
-                            .map(|(i, _)| i)
+                            .map(|(i, _)| i as u32)
                             .skip(semicolon_count - 1);
 
                         let range = Range {
                             start: Position {
                                 line: i,
-                                character: ture_start.next()? as u32 + 1,
+                                character: ture_start.next()? + 1,
                             },
                             end: Position {
                                 line: i,
-                                character: ture_start.next()? as u32,
+                                character: ture_start.next()?,
                             },
                         };
 
@@ -195,17 +195,17 @@ impl LanguageServer for Backend {
                 let mut ture_start = header_content
                     .char_indices()
                     .filter(|&(_, ch)| ch == ';')
-                    .map(|(i, _)| i)
+                    .map(|(i, _)| i as u32)
                     .skip(semicolon_count - 1);
 
                 let range = Range {
                     start: Position {
-                        line: *header_idx as u32,
-                        character: ture_start.next()? as u32 + 1,
+                        line: *header_idx,
+                        character: ture_start.next()? + 1,
                     },
                     end: Position {
-                        line: *header_idx as u32,
-                        character: ture_start.next()? as u32,
+                        line: *header_idx,
+                        character: ture_start.next()?,
                     },
                 };
 
@@ -244,7 +244,7 @@ impl Backend {
                     .iter()
                     .any(|prefix| line.trim_start().starts_with(prefix))
                 {
-                    *header_idx = idx;
+                    *header_idx = idx as u32;
                 }
                 Some((idx, line, *header_idx))
             })
