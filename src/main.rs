@@ -176,33 +176,75 @@ impl LanguageServer for Backend {
             let content_up_to_start = &content[0..start as usize];
             let semicolon_count = content_up_to_start.chars().filter(|&c| c == ';').count();
 
-            let header_uri = format!("{}:{}", uri, header_idx);
-            let header = self.line_map.get(header_uri.as_str())?;
-            let header_content = &header.content;
+            let mut higlights: Vec<DocumentHighlight> = Vec::new();
 
-            let mut ture_start = header_content
-                .char_indices()
-                .filter(|&(_, ch)| ch == ';')
-                .map(|(i, _)| i)
-                .skip(semicolon_count - 1);
+            if *header_idx as u32 == idx {
+                for i in idx + 1..=idx + 20 {
+                    let temp_uri = format!("{}:{}", uri, i);
+                    if let Some(temp_line) = self.line_map.get(temp_uri.as_str()) {
+                        if temp_line.header_idx as u32 != idx {
+                            break;
+                        }
+                        let temp_content = &temp_line.content;
 
-            let range = Range {
-                start: Position {
-                    line: *header_idx as u32,
-                    character: ture_start.next()? as u32 + 1,
-                },
-                end: Position {
-                    line: *header_idx as u32,
-                    character: ture_start.next()? as u32,
-                },
-            };
+                        let mut ture_start = temp_content
+                            .char_indices()
+                            .filter(|&(_, ch)| ch == ';')
+                            .map(|(i, _)| i)
+                            .skip(semicolon_count - 1);
 
-            let highlight = DocumentHighlight {
-                range,
-                kind: Some(DocumentHighlightKind::TEXT), // You can adjust the kind if needed
-            };
+                        let range = Range {
+                            start: Position {
+                                line: i,
+                                character: ture_start.next()? as u32 + 1,
+                            },
+                            end: Position {
+                                line: i,
+                                character: ture_start.next()? as u32,
+                            },
+                        };
 
-            return Some(vec![highlight]); // Return the highlight as a vector
+                        let highlight = DocumentHighlight {
+                            range,
+                            kind: Some(DocumentHighlightKind::TEXT), // You can adjust the kind if needed
+                        };
+
+                        higlights.push(highlight);
+                    } else {
+                        continue; // Skip to the next iteration if temp_line is None
+                    }
+                }
+            } else {
+                let header_uri = format!("{}:{}", uri, header_idx);
+                let header = self.line_map.get(header_uri.as_str())?;
+                let header_content = &header.content;
+
+                let mut ture_start = header_content
+                    .char_indices()
+                    .filter(|&(_, ch)| ch == ';')
+                    .map(|(i, _)| i)
+                    .skip(semicolon_count - 1);
+
+                let range = Range {
+                    start: Position {
+                        line: *header_idx as u32,
+                        character: ture_start.next()? as u32 + 1,
+                    },
+                    end: Position {
+                        line: *header_idx as u32,
+                        character: ture_start.next()? as u32,
+                    },
+                };
+
+                let highlight = DocumentHighlight {
+                    range,
+                    kind: Some(DocumentHighlightKind::TEXT), // You can adjust the kind if needed
+                };
+
+                higlights.push(highlight);
+            }
+
+            return Some(higlights); // Return the highlight as a vector
         }();
         if let Some(highlights) = &highlight_list {
             if let Some(first_highlight) = highlights.first() {
